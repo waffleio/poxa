@@ -29,7 +29,7 @@ RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 COPY . /src
 
 ENV MIX_ENV prod
-ENV PORT 8080
+ENV PORT 3008
 EXPOSE $PORT
 
 WORKDIR /src/
