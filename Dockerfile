@@ -1,40 +1,16 @@
-FROM ubuntu:trusty
+FROM msaraiva/elixir-dev:1.1.1
 
-ENV DEBIAN_FRONTEND noninteractive
+ENV APP_NAME poxa
 
-# Essential packages
-RUN apt-get -y update && \
-    apt-get -y install wget locales build-essential git
+RUN apk --update add erlang-xmerl erlang-crypto erlang-sasl && rm -rf /var/cache/apk/*
 
-# Ensure locale
-RUN apt-get -y update
-RUN dpkg-reconfigure locales && \
-    locale-gen en_US.UTF-8 && \
-    /usr/sbin/update-locale LANG=en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+COPY . /source
+WORKDIR /source
 
-# Install Erlang and Elixir
-RUN mkdir /tmp/erlang-build
-WORKDIR /tmp/erlang-build
-RUN wget http://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
-RUN dpkg -i erlang-solutions_1.0_all.deb
-RUN apt-get -y update && \
-    apt-get -y install erlang elixir
+RUN mix local.hex --force && mix local.rebar --force
+RUN MIX_ENV=prod mix deps.get
+RUN MIX_ENV=prod mix compile
+RUN MIX_ENV=prod mix release --verbosity=verbose --no-confirm-missing
+RUN mkdir /app && cp -r rel/$APP_NAME /app && rm -rf /source
 
-# Clean Up
-WORKDIR /
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-COPY . /src
-
-ENV MIX_ENV prod
-ENV PORT 3008
-EXPOSE $PORT
-
-WORKDIR /src/
-RUN mix local.hex --force
-RUN mix local.rebar --force
-RUN mix do deps.get, compile, compile.protocols
-
-CMD ["mix", "run", "--no-halt"]
+CMD trap exit TERM; /app/$APP_NAME/bin/$APP_NAME foreground & wait
