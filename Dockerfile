@@ -1,40 +1,46 @@
-FROM ubuntu:trusty
+FROM alpine:3.4
 
-ENV DEBIAN_FRONTEND noninteractive
+# Install erlang
+RUN set -x \
+  && apk --no-cache --update add \
+    erlang \
+    erlang-asn1 \
+    erlang-crypto \
+    erlang-dev\
+    erlang-erl-interface \
+    erlang-eunit \
+    erlang-inets \
+    erlang-parsetools \
+    erlang-public-key \
+    erlang-sasl \
+    erlang-ssl \
+    erlang-syntax-tools \
+  && rm -rf /var/cache/apk/*
 
-# Essential packages
-RUN apt-get -y update && \
-    apt-get -y install wget locales build-essential git
+# Install elixir
+ENV ELIXIR_VERSION 1.3.3
 
-# Ensure locale
-RUN apt-get -y update
-RUN dpkg-reconfigure locales && \
-    locale-gen en_US.UTF-8 && \
-    /usr/sbin/update-locale LANG=en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
+RUN set -x \
+  && apk --no-cache --update add --virtual build-dependencies ca-certificates git openssl \
+  && wget https://github.com/elixir-lang/elixir/releases/download/v${ELIXIR_VERSION}/Precompiled.zip \
+  && mkdir -p /opt/elixir-${ELIXIR_VERSION}/ \
+  && unzip Precompiled.zip -d /opt/elixir-${ELIXIR_VERSION}/ \
+  && rm Precompiled.zip \
+  && rm -rf /var/cache/apk/*
 
-# Install Erlang and Elixir
-RUN mkdir /tmp/erlang-build
-WORKDIR /tmp/erlang-build
-RUN wget http://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
-RUN dpkg -i erlang-solutions_1.0_all.deb
-RUN apt-get -y update && \
-    apt-get -y install erlang elixir
-
-# Clean Up
-WORKDIR /
-RUN apt-get clean
-RUN rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
-COPY . /src
+ENV PATH $PATH:/opt/elixir-${ELIXIR_VERSION}/bin
 
 ENV MIX_ENV prod
 ENV PORT 3008
 EXPOSE $PORT
 
+COPY . /src
+
 WORKDIR /src/
-RUN mix local.hex --force
-RUN mix local.rebar --force
-RUN mix do deps.get, compile, compile.protocols
+
+RUN set -x \
+  && mix local.hex --force \
+  && mix local.rebar --force \
+  && mix do deps.get, compile, compile.protocols
 
 CMD ["mix", "run", "--no-halt"]
