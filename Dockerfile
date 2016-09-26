@@ -31,7 +31,7 @@ RUN set -x \
 ENV PATH $PATH:/opt/elixir-${ELIXIR_VERSION}/bin
 
 ENV MIX_ENV prod
-ENV PORT 8080
+ENV PORT 3008
 EXPOSE $PORT
 
 COPY . /src
