@@ -36,6 +36,26 @@ defmodule Poxa.Console do
     {:ok, pid}
   end
 
+  def handle_event(%{event: :member_added, channel: channel, socket_id: socket_id, user_id: user_id}, pid) do
+    send_message("Member added", socket_id, "Channel: #{inspect channel}, UserId: #{inspect user_id}", pid)
+    {:ok, pid}
+  end
+
+  def handle_event(%{event: :member_removed, channel: channel, socket_id: socket_id, user_id: user_id}, pid) do
+    send_message("Member removed", socket_id, "Channel: #{inspect channel}, UserId: #{inspect user_id}", pid)
+    {:ok, pid}
+  end
+
+  def handle_event(%{event: :channel_vacated, channel: channel, socket_id: socket_id}, pid) do
+    send_message("Channel vacated", socket_id, "Channel: #{inspect channel}", pid)
+    {:ok, pid}
+  end
+
+  def handle_event(%{event: :channel_occupied, channel: channel, socket_id: socket_id}, pid) do
+    send_message("Channel occupied", socket_id, "Channel: #{inspect channel}", pid)
+    {:ok, pid}
+  end
+
   defp send_message(type, socket_id, details, pid) do
     msg = message(type, socket_id, details) |> encode!
     send(pid, msg)

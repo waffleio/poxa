@@ -104,9 +104,9 @@ defmodule Poxa.WebsocketHandler do
   defp handle_pusher_event("client-" <> _event_name, decoded_json, req, %State{socket_id: socket_id} = state) do
     {:ok, event} = PusherEvent.build_client_event(decoded_json, socket_id)
     channel = List.first(event.channels)
-    if Channel.private_or_presence?(channel) and Channel.subscribed?(channel, self) do
+    if Channel.private_or_presence?(channel) and Channel.member?(channel, self) do
       PusherEvent.publish(event)
-      Event.notify(:client_event_message, %{socket_id: socket_id, channels: event.channels, name: event.name})
+      Event.notify(:client_event_message, %{socket_id: socket_id, channels: event.channels, name: event.name, data: event.data})
     end
     {:ok, req, state}
   end
@@ -125,6 +125,8 @@ defmodule Poxa.WebsocketHandler do
   def websocket_info(:start, req, _state) do
     # Unique identifier for the connection
     socket_id = SocketId.generate!
+
+    SocketId.register!(socket_id)
 
     {origin, req} = :cowboy_req.host_url(req)
     Event.notify(:connected, %{socket_id: socket_id, origin: origin})
@@ -153,15 +155,15 @@ defmodule Poxa.WebsocketHandler do
 
   @doc """
   Before terminating the websocket process the presence channels are checked to trigger
-  member removal if necessary and explicitly unregister tags on gproc
+  member removal if necessary and explicitly unregister tags on registry
   """
   def websocket_terminate(_reason, _req, nil), do: :ok
   def websocket_terminate(_reason, _req, %State{socket_id: socket_id, time: time}) do
     duration = Time.stamp - time
     channels = Channel.all(self)
-    Event.notify(:disconnected, %{socket_id: socket_id, channels: channels, duration: duration})
     PresenceSubscription.check_and_remove
-    :gproc.goodbye
+    Poxa.registry.clean_up
+    Event.notify(:disconnected, %{socket_id: socket_id, channels: channels, duration: duration})
     :ok
   end
 end

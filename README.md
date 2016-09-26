@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/edgurgel/poxa.svg?branch=master)](https://travis-ci.org/edgurgel/poxa)
+[![Deps Status](https://beta.hexfaktor.org/badge/all/github/edgurgel/poxa.svg)](https://beta.hexfaktor.org/github/edgurgel/poxa)
 [![Inline docs](http://inch-ci.org/github/edgurgel/poxa.svg?branch=master)](http://inch-ci.org/github/edgurgel/poxa)
 [![Release](http://img.shields.io/github/release/edgurgel/poxa.svg)](https://github.com/edgurgel/poxa/releases/latest)
 [![Deploy](https://www.herokucdn.com/deploy/button.png)](https://heroku.com/deploy)
@@ -19,12 +20,14 @@ How do I speak 'poxa'?
 - [TODO](#todo)
 - [Typical usage](#typical-usage)
 - [Release](#release)
+- [Using Docker](#using-docker)
 - [Your application](#your-application)
-- [Deploying on Heroku](#deploying-on-heroku)
 - [Console](#console)
 - [Implementation](#implementation)
 - [Contributing](#contributing)
 - [Pusher](#pusher)
+- [Acknowledgements](#acknowledgements)
+- [Who is using it?](#who-is-using-it)
 
 ## Features
 
@@ -43,11 +46,10 @@ How do I speak 'poxa'?
 
 * [ ] SockJS support;
 * [x] Complete REST api;
-* [ ] Mimic pusher error codes;
-* [ ] Integration test using pusher-js or other client library;
-* [ ] Web hooks;
-* [ ] Specify types signature to functions and use dialyzer to check them on Travis;
-* [ ] Add 'Vacated' and 'Occupied' events to Console;
+* [x] Mimic pusher error codes;
+* [x] Integration test using pusher-js or other client library;
+* [x] Web hooks;
+* [x] Add 'Vacated' and 'Occupied' events to Console;
 * [X] Use GenEvent to generate Console events so other handlers can be attached (Web hook for example);
 * [ ] Turn Poxa on a distributed server with multiple nodes;
 
@@ -55,7 +57,7 @@ How do I speak 'poxa'?
 
 Poxa is a standalone elixir server implementation of the Pusher protocol.
 
-You need [Elixir](http://elixir-lang.org) 1.0.0 at least and Erlang 17.0
+You need [Elixir](http://elixir-lang.org) 1.2.6 at least and Erlang 18.0
 
 Clone this repository
 
@@ -113,7 +115,8 @@ config :poxa,
   app_key: "123456789",
   app_secret: "987654321",
   app_id: "theid",
-  ssl: [port: 8443,
+  ssl: [enabled: true,
+        port: 8443,
         cacertfile: "priv/ssl/server-ca.crt",
         certfile: "priv/ssl/server.crt",
         keyfile: "priv/ssl/server.key"]
@@ -168,14 +171,14 @@ You can change anything on this file and just start the release and this configu
 
 ## Using Docker
 
-Docker images are generated using [mix-edip](https://github.com/asaaki/mix-edip). They are available at Docker Hub: https://hub.docker.com/r/edgurgel/poxa/tags/
+Docker images are automatically built by [Docker Hub](https://hub.docker.com/r/edgurgel/poxa-automated/builds/). They are available at Docker Hub: https://hub.docker.com/r/edgurgel/poxa-automated/tags/
 
-One can generate it just running `MIX_ENV=prod mix edip --prefix edgurgel`.
+One can generate it just running `docker build -t local/poxa .`.
 
 The docker run command should look like this:
 
 ```
-docker run --rm -p 8080:8080 -v $PWD/mypoxa.conf:/app/releases/0.4.2/poxa.conf edgurgel/poxa:0.4.2
+docker run --rm -p 8080:8080 -v $PWD/mypoxa.conf:/app/poxa/running-config/poxa.conf local/poxa
 ```
 
 ## Your application
@@ -190,7 +193,7 @@ And pusher-js:
 ```javascript
 
 // will only use WebSockets
-var pusher = new Pusher(API_KEY, {
+var pusher = new Pusher(APP_KEY, {
   wsHost: 'localhost',
   wsPort: 8080,
   enabledTransports: ["ws", "flash"],
@@ -198,36 +201,7 @@ var pusher = new Pusher(API_KEY, {
 });
 ```
 
-## Deploying on Heroku
-
-Add the file `Procfile`:
-
-```
-web: elixir -pa _build/prod/consolidated -S mix run --no-halt
-```
-
-Add the file `elixir_buildpack.config`
-
-```
-# Erlang version
-erlang_version=17.0
-
-# Elixir version
-elixir_version=0.15.1
-
-# Do dependencies have to be built from scratch on every deploy?
-always_build_deps=false
-```
-
-Configure the buildpack using:
-
-```console
-heroku config:set BUILDPACK_URL="https://github.com/HashNuke/heroku-buildpack-elixir.git"
-```
-
-And this is it!
-
-A working deploy is on http://poxa.herokuapp.com, with:
+A working poxa is on http://poxa.herokuapp.com, with:
 
 * App key: "app_key"
 * App id: "app_id"
@@ -238,7 +212,7 @@ Also a pusher example(https://github.com/pusher/pusher-presence-demo) is running
 
 ## Console
 
-A simple console is avaiable on index:
+A simple console is available on index:
 
 ![Console](http://i.imgur.com/zEbZZgN.png)
 
@@ -264,14 +238,9 @@ Compile:
 mix compile
 ```
 
-The test suite used is the ExUnit and [meck](http://github.com/eproxus/meck) to mock stuff. First download test dependencies:
+The test suite used is the ExUnit and [meck](http://github.com/eproxus/meck) to mock stuff.
 
-```console
-MIX_ENV=test mix deps.get
-```
-
-
-Now you can run the tests:
+To run tests:
 
 ```console
 mix test
@@ -283,8 +252,11 @@ Pull requests are greatly appreciated.
 
 Pusher is an excellent service and you should use it on production.
 
-
 ## Acknowledgements
 
 Thanks to [@bastos](https://github.com/bastos) for the project name :heart:!
 
+## Who is using it?
+
+* [Waffle Takeout](https://takeout.waffle.io/)
+* Add your project/service here! Send a PR! :tada:

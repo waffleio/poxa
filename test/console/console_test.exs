@@ -45,4 +45,29 @@ defmodule Poxa.ConsoleTest do
 
     assert_received %{details: "Channels: [\"channel\"], Event: event_message", socket: "socket_id", time: _, type: "Client Event Message"}
   end
+
+  test "member_added" do
+    handle_event(%{event: :member_added, socket_id: "socket_id", channel: "presence-channel", user_id: "user_id"}, self)
+
+    assert_received %{details: "Channel: \"presence-channel\", UserId: \"user_id\"", socket: "socket_id", time: _, type: "Member added"}
+  end
+
+  test "member_removed" do
+    handle_event(%{event: :member_removed, socket_id: "socket_id", channel: "presence-channel", user_id: "user_id"}, self)
+
+    assert_received %{details: "Channel: \"presence-channel\", UserId: \"user_id\"", socket: "socket_id", time: _, type: "Member removed"}
+  end
+
+  test "channel_occupied" do
+    handle_event(%{event: :channel_occupied, channel: "channel", socket_id: "socket_id"}, self)
+
+    assert_received %{details: "Channel: \"channel\"", socket: "socket_id", time: _, type: "Channel occupied"}
+  end
+
+
+  test "channel_vacated" do
+    handle_event(%{event: :channel_vacated, channel: "channel", socket_id: "socket_id"}, self)
+
+    assert_received %{details: "Channel: \"channel\"", socket: "socket_id", time: _, type: "Channel vacated"}
+  end
 end

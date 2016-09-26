@@ -1,52 +1,71 @@
 defmodule Poxa.ChannelTest do
   use ExUnit.Case
-  import SpawnHelper
   import Poxa.Channel
+  import :meck
   doctest Poxa.Channel
 
+  setup do
+    new Poxa.registry
+    on_exit fn -> unload end
+    :ok
+  end
+
   test "occupied? returns false for empty channel" do
-    refute occupied?("a channel")
+    expect(Poxa.registry, :subscription_count, ["channel", :_], 0)
+
+    refute occupied?("channel")
+
+    assert validate Poxa.registry
   end
 
   test "occupied? returns true for populated channel" do
-    register_to_channel("a channel")
+    expect(Poxa.registry, :subscription_count, ["channel", :_], 42)
 
-    assert occupied?("a channel")
+    assert occupied?("channel")
+
+    assert validate Poxa.registry
   end
 
   test "list all channels" do
-    register_to_channel("channel1")
-    register_to_channel("channel2")
-    spawn_registered_process("channel3")
+    channels = ~w(channel1 channel2 channel3)
+    expect(Poxa.registry, :channels, [:_], ~w(channel1 channel2 channel3))
 
-    assert "channel1" in all
-    assert "channel2" in all
-    assert "channel3" in all
+    assert all == channels
+
+    assert validate Poxa.registry
   end
 
   test "list channels of a pid" do
-    register_to_channel("channel1")
-    register_to_channel("channel2")
-    register_to_channel("channel3")
+    channels = ~w(channel1 channel2 channel3)
+    expect(Poxa.registry, :channels, [self], ~w(channel1 channel2 channel3))
 
-    assert all(self) == ["channel1", "channel2", "channel3"]
+    assert all(self) == channels
+
+    assert validate Poxa.registry
   end
 
-  test "channel is subscribed? returning true" do
-    register_to_channel("channel")
+  test "channel is member? returning true" do
+    expect(Poxa.registry, :subscription_count, ["channel", self], 1)
 
-    assert subscribed?("channel", self)
+    assert member?("channel", self)
+
+    assert validate Poxa.registry
   end
 
   test "channel is subscribed returning false" do
-    refute subscribed?("channel", self)
+    expect(Poxa.registry, :subscription_count, ["channel", self], 0)
+
+    refute member?("channel", self)
+
+    assert validate Poxa.registry
   end
 
   test "subscription_count on channel" do
-    register_to_channel("channel")
-    spawn_registered_process("channel")
+    expect(Poxa.registry, :subscription_count, ["channel", :_], 2)
 
     assert subscription_count("channel") == 2
+
+    assert validate Poxa.registry
   end
 
   test "valid? return true for valid characters" do
@@ -60,7 +79,7 @@ defmodule Poxa.ChannelTest do
     assert valid?("foo-bar_1234@=,.;")
   end
 
-  test "valid? return false for valid characters" do
+  test "valid? return false for invalid characters" do
     refute valid?("some`channel")
     refute valid?("some~channel")
     refute valid?("some!channel")

@@ -48,9 +48,11 @@ defmodule Poxa.EventHandler do
     {method, req} = :cowboy_req.method(req)
     {path, req} = :cowboy_req.path(req)
     authorized = Authentication.check(method, path, body, qs_vals)
-    unless authorized do
-      req = :cowboy_req.set_resp_body(@authentication_error_json, req)
-    end
+    req = if authorized do
+            req
+          else
+            :cowboy_req.set_resp_body(@authentication_error_json, req)
+          end
     {authorized, req, state}
   end
 
@@ -61,9 +63,11 @@ defmodule Poxa.EventHandler do
   """
   def valid_entity_length(req, %{event: event} = state) do
     valid = byte_size(event.data) <= 10_000
-    unless valid do
-      req = :cowboy_req.set_resp_body(@invalid_data_size_json, req)
-    end
+    req = if valid do
+            req
+          else
+            :cowboy_req.set_resp_body(@invalid_data_size_json, req)
+          end
     {valid, req, state}
   end
 
@@ -80,7 +84,7 @@ defmodule Poxa.EventHandler do
   @doc false
   def post(req, %{event: event}) do
     PusherEvent.publish(event)
-    Event.notify(:api_message, %{channels: event.channels, name: event.name})
+    Event.notify(:api_message, %{channels: event.channels, name: event.name, socket_id: nil})
     req = :cowboy_req.set_resp_body("{}", req)
     {true, req, nil}
   end

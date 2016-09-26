@@ -1,5 +1,5 @@
 defmodule Poxa.Integration.TriggerEvent do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   @moduletag :integration
 

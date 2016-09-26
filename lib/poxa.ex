@@ -6,6 +6,10 @@ defmodule Poxa do
   use Application
   require Logger
 
+  @registry_adapter Poxa.Registry.adapter
+
+  def registry, do: @registry_adapter
+
   def start(_type, _args) do
     dispatch = :cowboy_router.compile([
       {:_, [ { '/ping', Poxa.PingHandler, [] },
@@ -20,7 +24,7 @@ defmodule Poxa do
     case load_config do
       {:ok, config} ->
         Logger.info "Starting Poxa using app_key: #{config.app_key}, app_id: #{config.app_id}, app_secret: #{config.app_secret} on port #{config.port}"
-        {:ok, _} = :cowboy.start_http(:http, 100,
+        {:ok, _} = :cowboy.start_http(:poxa, 100,
                                       [port: config.port],
                                       [env: [dispatch: dispatch]])
         run_ssl(dispatch)
@@ -32,7 +36,9 @@ defmodule Poxa do
 
   end
 
-  def stop(_State), do: :ok
+  def stop(_State) do
+    :ok = :cowboy.stop_listener(:poxa)
+  end
 
   defp load_config do
     try do
@@ -40,8 +46,10 @@ defmodule Poxa do
       {:ok, app_id} = Application.fetch_env(:poxa, :app_id)
       {:ok, app_secret} = Application.fetch_env(:poxa, :app_secret)
       {:ok, port} = Application.fetch_env(:poxa, :port)
+      {:ok, registry_adapter} = Application.fetch_env(:poxa, :registry_adapter)
       {:ok, %{app_key: app_key, app_id: app_id,
-              app_secret: app_secret, port: to_integer(port)}}
+              app_secret: app_secret, port: to_integer(port),
+              registry_adapter: registry_adapter}}
     rescue
       MatchError -> :invalid_configuration
     end
@@ -53,18 +61,20 @@ defmodule Poxa do
   defp run_ssl(dispatch) do
     case Application.fetch_env(:poxa, :ssl) do
       {:ok, ssl_config} ->
-        if Enum.all?([:port, :certfile, :keyfile], &Keyword.has_key?(ssl_config, &1)) do
+        if enabled_ssl?(ssl_config) do
           ssl_port = Keyword.get(ssl_config, :port)
-          if ssl_port do
-            {:ok, _} = :cowboy.start_https(:https, 100, ssl_config, [env: [dispatch: dispatch] ])
-            Logger.info "Starting Poxa using SSL on port #{ssl_port}"
-          else
-            Logger.info "SSL not configured/started"
-          end
+          Logger.info "Starting Poxa using SSL on port #{ssl_port}"
+          {:ok, _} = :cowboy.start_https(:https, 100, ssl_config, [env: [dispatch: dispatch] ])
         else
-          Logger.error "Must specify port, certfile and keyfile (cacertfile optional)"
+          Logger.info "SSL not configured/started"
         end
-      :error -> Logger.info "SSL not configured/started"
+      :error ->
+        Logger.info "SSL not configured/started"
     end
+  end
+
+  defp enabled_ssl?(ssl_config) do
+    enabled = Keyword.get(ssl_config, :enabled, false)
+    enabled and Enum.all?([:port, :certfile, :keyfile], &Keyword.has_key?(ssl_config, &1))
   end
 end
